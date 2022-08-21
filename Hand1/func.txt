@@ -1,0 +1,4 @@
+erl -name 'hand1@127.0.0.1' -setcookie cook
+
+c(main_hand1).
+main_hand1:start().
