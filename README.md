@@ -1,13 +1,13 @@
 # FinalPorjectFPinCandDS
-Final Project in Functional programming in concurrent and distributed systems. Simulation of the blood cells function inside our body.
+Final Project in Functional programming in concurrent and distributed systems. Human blood system simulation.
 
-In order to run the program first there is need in the ip of all the computer that will be running this program (max number of five).
-After getting all the ip adress select one for the main process (the head), and a process ip for every limb (4 in total).
-Open a folder and switch the Define addresses with the name of your node icluding the ip, in the all the places where the defines, 
-accourding to you selection when "My_node" is the adress of the corrent process, "Head_Node" is the main process and for each imb there is 
-its nieghbor limb: hand0 -> hand1 -> foot0 -> foot1 -> hand0. so in the define "Next_node" write the ip address of the corresonding node as
-decided.
-The files which need to be addited are foot0, foot1, hand0, hand1, all recover* files in each limb folder and in head in head folder.
-After that in each computer open the corresponding folder of the limb and run erlang using: "erl -name *selected corresponding name and ip* -setcookie cook
-compile the file named: main_*limbname* and run main_*limbnmae*:start().
+In order to run the program:
+1. Download all folders.
+2. In each folder, run the 1st command (which opens the erlang shell) in a different terminal (5 terminals in total).
+3. Run the 2 remaining commands in the corresponding terminal - IMPORTANT -> you need to activate them all within 15 seconds or it wont work (this is due to the recovery method).
+4. From the "head" Gui you control all the functions. in order to creat the initial blood cells you need to press "run"->"start everything".
+5. Before running the "random" option, set the system to normal.
+6. do not spawn new events when "random" is running (it spawns 20 random events- so wait until it finishes).  
+
+enjoy.
 
