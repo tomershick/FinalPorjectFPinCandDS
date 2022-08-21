@@ -121,7 +121,7 @@ handle_call({update, CellID, PosX, PosY, SpeedX, SpeedY, Hit}, _From, {{SType, S
       New_state = {normal, 0, 0, 0},
       [{_,StartTime,TypeP,_,_,_,_}] = ets:lookup(?Name_table,999),	
       EndTime = erlang:system_time(second),
-      %io:format("~p ended in ~p seconds ~n",[TypeP,EndTime-StartTime]),
+      io:format("~p ended in ~p seconds ~n",[TypeP,EndTime-StartTime]),
       ets:delete(?Name_table,999),
       %TODO: send the new state to the head state
       gen_server:call({?Head_Module,?Head_Node},{organ_state_change,?Name_table,normal, 0, 0, 0}),
