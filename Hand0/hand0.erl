@@ -22,8 +22,8 @@
 %%testing
 -export([run_screen/2]).
 -define(SERVER, ?MODULE).
--define(Next_node, 'hand1@132.72.48.231').
--define(My_node,'hand0@132.72.48.230').
+-define(Next_node, 'hand1@127.0.0.1').
+-define(My_node,'hand0@127.0.0.1').
 -define(Next_module, hand1).
 -define(Name_table, hand0).
 -define(Cell_Module, cellhand0).
@@ -32,7 +32,7 @@
 -define(Xsize,1000).
 -define(Ysize,800).
 -define(Head_Module,head).
--define(Head_Node,'head@132.72.51.163').
+-define(Head_Node,'head@127.0.0.1').
 -define(Init_cells,300).
 -define(Pid_screen_def,pid_screen_hand0).
 -define(Pid_print_speed_def,pid_print_speed_hand0).
@@ -245,7 +245,7 @@ code_change(_OldVsn, {State,NextNode}, _Extra) ->
 
 run_screen(Xsize,Ysize)->
   Wx = wx:new(),
-  Frame = wxFrame:new(Wx, -1, "Screen", [{size, {Xsize, Ysize}}]),
+  Frame = wxFrame:new(Wx, -1, "Hand0", [{size, {Xsize, Ysize}}]),
   Panel = wxPanel:new(Frame),
   OnPaint = fun(_Evt, _Obj) ->
     Brush = wxBrush:new(),

@@ -15,8 +15,8 @@
 
 
 -define(SERVER, ?MODULE).
--define(Next_node, 'hand0@132.72.48.230').
--define(My_node, 'foot1@132.72.50.250').
+-define(Next_node, 'hand0@127.0.0.1').
+-define(My_node, 'foot1@127.0.0.1').
 -define(Next_module, hand0).
 -define(My_module, foot1).
 -define(Recover_table,recover_foot1).
@@ -24,7 +24,7 @@
 -define(Recover_module,recoverfoot1).
 -define(Timer,1000).
 -define(Head_Module,head).
--define(Head_Node,'head@132.72.51.163').
+-define(Head_Node,'head@127.0.0.1').
 -define(Init_cells,300).
 -define(Send_Msg,new_hand0node_received).
 

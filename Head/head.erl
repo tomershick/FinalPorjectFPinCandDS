@@ -21,10 +21,10 @@
 -define(SERVER, ?MODULE).
 
 
--define(Hand0_node, 'hand0@132.72.48.230').
--define(Hand1_node, 'hand1@132.72.48.231').
--define(Foot0_node, 'foot0@132.72.54.72').
--define(Foot1_node, 'foot1@132.72.50.250').
+-define(Hand0_node, 'hand0@127.0.0.1').
+-define(Hand1_node, 'hand1@127.0.0.1').
+-define(Foot0_node, 'foot0@127.0.0.1').
+-define(Foot1_node, 'foot1@127.0.0.1').
 -define(Hand0_module, hand0).
 -define(Hand1_module, hand1).
 -define(Foot0_module, foot0).

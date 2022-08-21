@@ -22,8 +22,8 @@
 %%testing
 -export([run_screen/2]).
 -define(SERVER, ?MODULE).
--define(Next_node, 'foot0@132.72.54.72').
--define(My_node,'hand1@132.72.48.231').
+-define(Next_node, 'foot0@127.0.0.1').
+-define(My_node,'hand1@127.0.0.1').
 -define(Next_module, foot0).
 -define(Name_table, hand1).
 -define(Cell_Module, cellhand1).
@@ -32,7 +32,7 @@
 -define(Xsize,1000).
 -define(Ysize,800).
 -define(Head_Module,head).
--define(Head_Node,'head@132.72.51.163').
+-define(Head_Node,'head@127.0.0.1').
 -define(Init_cells,300).
 -define(Pid_screen_def,pid_screen_hand1).
 -define(Pid_print_speed_def,pid_print_speed_hand1).
@@ -62,7 +62,7 @@ init([]) ->
   register(?Pid_print_speed_def,Pid_print_speed),
   Table = ets:new(?Name_table,[public,named_table]),
   %Pid_recover = spawn_link(?Recover_module,start,[]),
-  {ok, {State = {normal, 0, 0, 0},NextNode = 'foot0@132.72.54.72'}}. %in the ETS cellID (first arg) is the Key
+  {ok, {State = {normal, 0, 0, 0},NextNode = ?Next_node}}. %in the ETS cellID (first arg) is the Key
       %state definition {state , Xpos, Ypos, counter to destruction-infection/cut}
 % Kinds of calls (THIS IS A SERVER FOR A SIMPLE ORGAN- hand/feet):
 % 1. any cell updating its position. {update, CellID, PosX, PosY}
@@ -244,7 +244,7 @@ code_change(_OldVsn, {State,NextNode}, _Extra) ->
 
 run_screen(Xsize,Ysize)->
   Wx = wx:new(),
-  Frame = wxFrame:new(Wx, -1, "Screen", [{size, {Xsize, Ysize}}]),
+  Frame = wxFrame:new(Wx, -1, "Hand1", [{size, {Xsize, Ysize}}]),
   Panel = wxPanel:new(Frame),
   OnPaint = fun(_Evt, _Obj) ->
     Brush = wxBrush:new(),

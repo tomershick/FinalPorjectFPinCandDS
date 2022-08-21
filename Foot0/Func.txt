@@ -1,4 +1,4 @@
-erl -name 'foot0@132.72.54.72' -setcookie cook
+erl -name 'foot0@127.0.0.1' -setcookie cook
 
 c(main_foot0).
 main_foot0:start().
