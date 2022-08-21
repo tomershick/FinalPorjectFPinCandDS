@@ -1,7 +1,7 @@
 # FinalPorjectFPinCandDS
 Final Project in Functional programming in concurrent and distributed systems. Human blood system simulation.
 
-In order to run the program:
+In order to run the program on a single computer:
 1. Download all folders.
 2. In each folder, run the 1st command (which opens the erlang shell) in a different terminal (5 terminals in total).
 3. Run the 2 remaining commands in the corresponding terminal - IMPORTANT -> you need to activate them all within 15 seconds or it wont work, we suggest putting the commands on all terminals and then press the "Enter" key on each one (this is due to the recovery method).
@@ -11,3 +11,9 @@ In order to run the program:
 
 enjoy.
 
+
+
+
+
+
+In order to run on multiple computers you need to find the IP of each computer and then change the Define in each file to be its IP instead of 127.0.0.1. then run the program.
