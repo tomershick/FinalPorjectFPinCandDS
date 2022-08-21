@@ -1,4 +1,5 @@
 # FinalPorjectFPinCandDS
+This project was created by Tomer Shick and Yonatan Rak
 Final Project in Functional programming in concurrent and distributed systems. Human blood system simulation.
 
 In order to run the program on a single computer:
