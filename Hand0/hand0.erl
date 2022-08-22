@@ -19,7 +19,7 @@
   code_change/3]).
 -compile(export_all).
 
-%%testing
+
 -export([run_screen/2]).
 -define(SERVER, ?MODULE).
 -define(Next_node, 'hand1@127.0.0.1').
@@ -53,7 +53,7 @@ start_link() ->
 %%%=================================================================================================================
 
 %% @private
-%% @doc Initializes the server
+%% Initializes the server
 init([]) ->
   process_flag(trap_exit, true), %Make the server a system process
   Pid_screen = spawn_link(?MODULE,run_screen,[?Xsize,?Ysize]), %spawn the GUI process
