@@ -48,42 +48,43 @@ start_link() ->
 %%%=================================================================================================================
 
 init([]) ->
-  process_flag(trap_exit, true),
+  process_flag(trap_exit, true), %system process
 
-  Table = ets:new(?Name_table,[public,named_table]),
-  ets:insert(?Name_table,{hand0, ?Hand0_node, ?Hand0_module, normal, 0, 0, 0}),
+  Table = ets:new(?Name_table,[public,named_table]), %This ETS holds all information about the different servers
+  ets:insert(?Name_table,{hand0, ?Hand0_node, ?Hand0_module, normal, 0, 0, 0}), % put all servers into the ETS
   ets:insert(?Name_table,{hand1, ?Hand1_node, ?Hand1_module, normal, 0, 0, 0}),
   ets:insert(?Name_table,{foot0, ?Foot0_node, ?Foot0_module, normal, 0, 0, 0}),
   ets:insert(?Name_table,{foot1, ?Foot1_node, ?Foot1_module, normal, 0, 0, 0}),
-  PidHead = spawn_link(gui,start,[]),
-{ok, {State = {normal, 0, 0, 0},Nodes = {?Hand0_node,?Hand1_node,?Foot0_node,?Foot1_node}}}.
+  PidHead = spawn_link(gui,start,[]), %GUI process
+{ok, {State = {normal, 0, 0, 0},Nodes = {?Hand0_node,?Hand1_node,?Foot0_node,?Foot1_node}}}. %finish the INIT all nodes and state are specified and carried on
 
 %% @private
 %% @doc Handling call messages
 
 handle_call({state_change,{_,Type,0,0,0}}, _From, {State,{Hand0Node,Hand1Node,Foot0Node,Foot1Node}}) -> %coming from the GUI. This is for normal/stress states
   %send_all(normal,?Name_table,ets:first(?Name_table)),
-  send_all(Type,?Name_table,ets:first(?Name_table)),
-  ets:insert(?Name_table,{hand0, Hand0Node, ?Hand0_module, Type, 0, 0, 0}),
+  send_all(Type,?Name_table,ets:first(?Name_table)), %pass the state to all the different organs
+  ets:insert(?Name_table,{hand0, Hand0Node, ?Hand0_module, Type, 0, 0, 0}), %update the ETS
   ets:insert(?Name_table,{hand1, Hand1Node, ?Hand1_module, Type, 0, 0, 0}),
   ets:insert(?Name_table,{foot0, Foot0Node, ?Foot0_module, Type, 0, 0, 0}),
   ets:insert(?Name_table,{foot1, Foot1Node, ?Foot1_module, Type, 0, 0, 0}),
   {reply, ok, {State,{Hand0Node,Hand1Node,Foot0Node,Foot1Node}}};
 
 handle_call({state_change,{Organ,Type,Posx,Posy,Counter}}, _From, {State,Nodes}) -> %coming from the GUI. this is for virus/cut states
-  case ets:lookup(?Name_table,Organ) of
+  case ets:lookup(?Name_table,Organ) of % changes only the specific organ specified in "Organ"
     []->void;
     [{Organ, Node, Module, _, _, _, _}]->
-      gen_server:call({Module,Node},{state,{normal,0,0,0}}),
+      gen_server:call({Module,Node},{state,{normal,0,0,0}}), %changes the state to normal first
       gen_server:call({Module,Node},{state,{Type,Posx,Posy,Counter}}),
       ets:insert(?Name_table,{Organ, Node, Module, Type,Posx,Posy,Counter})
   end,
   {reply, ok, {State,Nodes}};
 
 
-handle_call(new_state_received, _From, {State,Nodes}) -> %coming from the organs
+handle_call(new_state_received, _From, {State,Nodes}) -> %coming from the organs, just an ACK
   {reply, ok, {State,Nodes}};
 
+%all these are for the Recovery - each recover process will send a message to the head if a server falls
 handle_call({new_hand1node_received,NewHand1Node}, _From, {State,{Hand0Node,Hand1Node,Foot0Node,Foot1Node}}) -> %coming from the organs
   [{_,_,_,Type,Posx,Posy,Counter}] = ets:lookup(?Name_table,hand1),
   ets:insert(?Name_table,{hand1, NewHand1Node, ?Hand1_module, Type,Posx,Posy,Counter}),
@@ -104,14 +105,14 @@ handle_call({new_foot1node_received,NewFoot1Node}, _From, {State,{Hand0Node,Hand
   ets:insert(?Name_table,{foot1, NewFoot1Node, ?Foot1_module, Type,Posx,Posy,Counter}),
   {reply, ok, {State,{Hand0Node,Hand1Node,Foot0Node,NewFoot1Node}}};
 
-handle_call({organ_state_change,Organ,Type,Posx,Posy,Counter}, _From, {State,Nodes}) -> %coming from the organs
+handle_call({organ_state_change,Organ,Type,Posx,Posy,Counter}, _From, {State,Nodes}) -> %coming from the organs, notifies the head if a state chaged (usually when a cut/virus are dealt with)
   case ets:lookup(?Name_table,Organ) of
     []->void;
     [{Organ, Node, Module, _, _, _, _}]->ets:insert(?Name_table,{Organ, Node, Module,Type, Posx, Posy, Counter})
     end,
   {reply, ok, {State,Nodes}};
 
-handle_call(start, _From, {State,Nodes = {Hand0Node,Hand1Node,Foot0Node,Foot1Node}}) -> %coming from the organs
+handle_call(start, _From, {State,Nodes = {Hand0Node,Hand1Node,Foot0Node,Foot1Node}}) -> % coming from the GUI, creates cells in each organ and starts the system
   ets:insert(?Name_table,{hand0, Hand0Node, ?Hand0_module, normal, 0, 0, 0}),
   ets:insert(?Name_table,{hand1, Hand1Node, ?Hand1_module, normal, 0, 0, 0}),
   ets:insert(?Name_table,{foot0, Foot0Node, ?Foot0_module, normal, 0, 0, 0}),
@@ -123,15 +124,11 @@ handle_call(start, _From, {State,Nodes = {Hand0Node,Hand1Node,Foot0Node,Foot1Nod
 handle_cast(_Request, {State,Nodes}) ->
   {noreply, {State,Nodes}}.
 
-
-
 handle_info(_Info, {State,Nodes}) ->
   {noreply, {State,Nodes}}.
 
-
 terminate(_Reason, {_State,_Nodes}) ->
   ok.
-
 
 code_change(_OldVsn, {State,Nodes} , _Extra) ->
   {ok, {State,Nodes}}.
@@ -145,15 +142,16 @@ update_state(New_state) -> gen_server:call(?MODULE,{state_change,New_state}). % 
                                                                               % New_state = {stress/normal, 0, 0, 0}
 start_everything() -> gen_server:call(?MODULE,start).
 
-random_events() -> Pid_screen = spawn_link(?MODULE,random_loop,[20]).
+random_events() -> Pid_screen = spawn_link(?MODULE,random_loop,[20]). %creats a process that runs 20 random events
 
+%sends all orgnas aa start message with "I" indicating the starting Index value for the cells 
 send_all(start,?Name_table,Organ,I) ->
   case ets:lookup(?Name_table,Organ) of
     [] -> finished;
     [{Organ, Node, Module, _, _, _, _}] -> gen_server:call({Module,Node},{start,I}),
       send_all(start,?Name_table,ets:next(?Name_table,Organ),I+1000)
   end.
-
+%passes a state specified in "Type" to all servers
 send_all(Type,?Name_table,Organ) ->
   case ets:lookup(?Name_table,Organ) of
     [] -> finished;
@@ -161,10 +159,10 @@ send_all(Type,?Name_table,Organ) ->
       send_all(Type,?Name_table,ets:next(?Name_table,Organ))
   end.
 
-
+% Here we create a random event until "Time" = 0. 
 random_loop(0)->finished;
 random_loop(Time)->
-  Type_index = rand:uniform(10),
+  Type_index = rand:uniform(10), %random organ and type are rolled, based on the number a suiting organ and state are selected
   Organ_index = rand:uniform(4),
 
   Organ = case Organ_index of
@@ -186,14 +184,14 @@ random_loop(Time)->
             10 -> {cut,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(40)+160}            
           end,
   if 
-    Type == stress ->
+    Type == stress -> % if stress is rolled, we stress the body for 10 seconds then return to normal
 			update_state({Organ,Type,Posx,Posy,Counter}),
 			receive
 			    x -> void
 			after 10000 -> update_state({Organ,normal,0,0,0})
 			end;
-    true-> %type is virus/cut
-  	case ets:lookup(?Name_table,Organ) of
+    true-> %type is virus/cut.    here we make sure that if there is an active virus/cut in an organ we wont change the state 
+  	case ets:lookup(?Name_table,Organ) of 
 		[{Organ, _, _, virus, _, _, _}] -> do_nothing;
 		[{Organ, _, _, cut, _, _, _}] -> do_nothin;
 		[{Organ, _, _, normal, _, _, _}] -> update_state({Organ,Type,Posx,Posy,Counter});
@@ -201,7 +199,7 @@ random_loop(Time)->
 	end	
   end,
 
-  receive
+  receive %simple timer
     x -> void
   after ?Timer ->random_loop(Time-1)
   end.
