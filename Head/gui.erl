@@ -60,28 +60,29 @@ start() ->
     {_,X,_,_,_}-> 
 			io:fwrite("~p ~n", [X]),
 			case X of
+				%normal state
 				100 -> 	head:update_state({hand0,normal,0,0,0}),
 					head:update_state({hand1,normal,0,0,0}),
 					head:update_state({foot0,normal,0,0,0}),
 					head:update_state({foot1,normal,0,0,0}),
 					loop(Frame,Panel);
-
+				%stress state
 				200 ->	head:update_state({hand0,stress,0,0,0}),
 					head:update_state({hand1,stress,0,0,0}),
 					head:update_state({foot0,stress,0,0,0}),
 					head:update_state({foot1,stress,0,0,0}),
 					loop(Frame,Panel);
-
+				%cut states
 				310 -> head:update_state({hand0,cut,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				320 -> head:update_state({hand1,cut,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				330 -> head:update_state({foot0,cut,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				340 -> head:update_state({foot1,cut,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
-
+				%virus states
 				410 -> head:update_state({hand0,virus,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				420 -> head:update_state({hand1,virus,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				430 -> head:update_state({foot0,virus,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
 				440 -> head:update_state({foot1,virus,rand:uniform(800)+100,rand:uniform(600)+100,rand:uniform(100)+50}),loop(Frame,Panel);
-
+				
 				500 -> head:start_everything(),loop(Frame,Panel);
 
 				510 -> head:random_events(),loop(Frame,Panel);
@@ -91,7 +92,7 @@ start() ->
 				_ -> loop(Frame,Panel)
 				end
     				after 100 ->
-				OnPaint = fun(_Evt, _Obj) ->
+				OnPaint = fun(_Evt, _Obj) -> % Here we put all the visual elements such as writings and the states of each orgna
 						    Brush = wxBrush:new(),
 						    Paint = wxPaintDC:new(Panel),
 						    wxDC:drawLabel(Paint,"Press Action  ->  select condition \n Press run  ->  Start simulation",{(?max_x) div 3,(?max_y) div 3,200,200}),
@@ -105,7 +106,7 @@ start() ->
 
 						    [{_,_,_,State0,_,_,_}] = ets:match_object(?Name_table, {'hand0', '$1','$2', '$3','$4', '$5','$6'}),	
 						    wxDC:drawLabel(Paint,atom_to_list(State0),{((?max_x) div 3)-205,((?max_y) div 3)+100,200,200}),
-if 
+if %each if will show the cut/virus circle if the state of the organ correspond it
 State0 == virus ->       wxBrush:setColour(Brush,{0,255,0}),
       			 wxDC:setBrush(Paint, Brush),
       			 wxDC:drawCircle(Paint,{((?max_x) div 3)-190,((?max_y) div 3)+150},10);
