@@ -61,7 +61,7 @@ init([]) ->
   Pid_print_speed = spawn_link(?MODULE,print_avg_speed,[]),
   register(?Pid_print_speed_def,Pid_print_speed),
   Table = ets:new(?Name_table,[public,named_table]),
-  %Pid_recover = spawn_link(?Recover_module,start,[]),
+  %Pid_recover = spawn_link(?Recover_module,start,[]),  %NOTICE HERE THAT THE LINE IS IN COMMENT, so we dont open another recovery module. This is the only difference between hand1 in this folder to hand1 in "hand1" folder
   {ok, {State = {normal, 0, 0, 0},NextNode = ?Next_node}}. %in the ETS cellID (first arg) is the Key
       %state definition {state , Xpos, Ypos, counter to destruction-infection/cut}
 % Kinds of calls (THIS IS A SERVER FOR A SIMPLE ORGAN- hand/feet):
