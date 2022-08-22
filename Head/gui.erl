@@ -23,23 +23,25 @@ start() ->
 	MenuBar = wxMenuBar:new(),
 	wxFrame:setMenuBar (Frame, MenuBar),
 	wxFrame:getMenuBar (Frame),
+	%% Setting up action menu
 	FileMn = wxMenu:new(),wxMenuBar:append (MenuBar, FileMn, "&Action"),
 	Normal=wxMenuItem:new ([{id,100},{text, "&Normal"}]),wxMenu:append (FileMn, Normal),
 	Stress=wxMenuItem:new ([{id,200},{text, "&Stress"}]),wxMenu:append (FileMn, Stress),
 	CutMn = wxMenu:new(),
 	InfectionMn = wxMenu:new(),
+	%% Setting up cut sub menuv
 	Cut=wxMenuItem:new ([{id,300},{text, "&Cut"},{subMenu,CutMn}]),wxMenu:append (FileMn, Cut),
 	CutLeftHand = wxMenuItem:new ([{id,310},{text, "&Left Hand"}]),wxMenu:append (CutMn, CutLeftHand),
 	CutRightHand = wxMenuItem:new ([{id,320},{text, "&Right Hand"}]),wxMenu:append (CutMn, CutRightHand),
 	CutRightLeg = wxMenuItem:new ([{id,330},{text, "&Left Leg"}]),wxMenu:append (CutMn, CutRightLeg),
 	CutLeftLeg = wxMenuItem:new ([{id,340},{text, "&Right Leg"}]),wxMenu:append (CutMn, CutLeftLeg),
-
+	%% Setting up infection sub menu
 	Infection=wxMenuItem:new ([{id,400},{text, "&Infection"},{subMenu,InfectionMn}]),wxMenu:append (FileMn, Infection),
 	InfectionLeftHand = wxMenuItem:new ([{id,410},{text, "&Left Hand"}]),wxMenu:append (InfectionMn, InfectionLeftHand),
 	InfectionRightHand = wxMenuItem:new ([{id,420},{text, "&Right Hand"}]),wxMenu:append (InfectionMn, InfectionRightHand),
 	InfectionRightLeg = wxMenuItem:new ([{id,430},{text, "&Left Leg"}]),wxMenu:append (InfectionMn, InfectionRightLeg),
 	InfectionLeftLeg = wxMenuItem:new ([{id,440},{text, "&Right Leg"}]),wxMenu:append (InfectionMn, InfectionLeftLeg),
-
+	%% Setting up run menu
 	RunMn = wxMenu:new(),
 	wxMenuBar:append (MenuBar, RunMn, "&Run"),
 	Start = wxMenuItem:new ([{id,500},{text,"Start everything"}]),wxMenu:append (RunMn, Start),
