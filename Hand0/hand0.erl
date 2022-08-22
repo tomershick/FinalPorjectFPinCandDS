@@ -29,11 +29,11 @@
 -define(Cell_Module, cellhand0).
 -define(Recover_module,recoverhand0).
 -define(Timer,100).
--define(Xsize,1000).
+-define(Xsize,1000). %defines the size of the screen
 -define(Ysize,800).
 -define(Head_Module,head).
 -define(Head_Node,'head@127.0.0.1').
--define(Init_cells,300).
+-define(Init_cells,300). %defines the initial number of cells on this organ
 -define(Pid_screen_def,pid_screen_hand0).
 -define(Pid_print_speed_def,pid_print_speed_hand0).
 
@@ -55,16 +55,17 @@ start_link() ->
 %% @private
 %% @doc Initializes the server
 init([]) ->
-  process_flag(trap_exit, true),
-  Pid_screen = spawn_link(?MODULE,run_screen,[?Xsize,?Ysize]),
+  process_flag(trap_exit, true), %Make the server a system process
+  Pid_screen = spawn_link(?MODULE,run_screen,[?Xsize,?Ysize]), %spawn the GUI process
   register(?Pid_screen_def,Pid_screen),
-  Pid_print_speed = spawn_link(?MODULE,print_avg_speed,[]),
+  Pid_print_speed = spawn_link(?MODULE,print_avg_speed,[]), %spawn the statistics for speed of cells
   register(?Pid_print_speed_def,Pid_print_speed),
-  Table = ets:new(?Name_table,[public,named_table]),
-  Pid_recover = spawn_link(?Recover_module,start,[]),
+  Table = ets:new(?Name_table,[public,named_table]), % create an ETS- where we keep track of all cells and viruses/cuts 
+  Pid_recover = spawn_link(?Recover_module,start,[]), %spwan the recovery module
   {ok, {State = {normal, 0, 0, 0},NextNode = ?Next_node}}. %in the ETS cellID (first arg) is the Key
-      %state definition {state , Xpos, Ypos, counter to destruction-infection/cut}
-% Kinds of calls (THIS IS A SERVER FOR A SIMPLE ORGAN- hand/feet):
+      
+
+% Main Kinds of calls (THIS IS A SERVER FOR A SIMPLE ORGAN- hand/feet):
 % 1. any cell updating its position. {update, CellID, PosX, PosY}
 % 2. any cell entering area. {newCell,CellID,Type = red/white, PosX, PosY, SpeedX, SpeedY}
 % 3. any cell leaving area. {leaving, CellID}cc(test_server).
@@ -72,31 +73,34 @@ init([]) ->
 
 
 %%%=================================================================================================================
-%%                                  Cell communication calls
+%%                                  Communication calls
 %%%=================================================================================================================
+% Handles a cast telling the Organ that a new cell arrived to its area
 handle_cast({newCell, CellID, Type, PosX, PosY, SpeedX, SpeedY}, {State,NextNode}) ->
-if (Type == virus) or (Type ==cut) -> ets:insert(?Name_table,{999, erlang:system_time(second), Type, PosX, PosY, 0, 0});
-true-> 
-Reply = case ets:lookup(?Name_table,CellID) of 
-            %[] -> PID = spawn_link(?MODULE,cell_loop,[CellID, Type, PosX, PosY, SpeedX, SpeedY]), %in the ETS cellID (first arg) is the Key
-            [] -> PID = spawn_link(?Cell_Module,cell_loop,[CellID, Type, PosX, PosY, SpeedX, SpeedY,0,0]), %in the ETS cellID (first arg) is the Key
-              ets:insert(?Name_table,{CellID, PID, Type, PosX, PosY, SpeedX, SpeedY}),
-              PID ! State,
+if (Type == virus) or (Type ==cut) -> ets:insert(?Name_table,{999, erlang:system_time(second), Type, PosX, PosY, 0, 0}); % if its a virus\cut type We put it in the Ets so we can print it later
+true->  %red/white cell
+Reply = case ets:lookup(?Name_table,CellID) of %the "Reply" is redundent
+            [] -> PID = spawn_link(?Cell_Module,cell_loop,[CellID, Type, PosX, PosY, SpeedX, SpeedY,0,0]), % Spawn the cell with the given arguments
+              ets:insert(?Name_table,{CellID, PID, Type, PosX, PosY, SpeedX, SpeedY}), %put cell in the ETS. cellID (first arg) is the Key
+              PID ! State, %send the cell the state of the organ (normal/virus etc.)
               {received,CellID}; % will be sent to the previous organ.
             [_] -> {duplicate_cell, CellID} % will be sent to the previous organ.
           end
 end,
   {noreply,{State,NextNode}};
 
-handle_cast({recover,Node},{State,NextNode})->
+%used for the recovery. here we answer the recover node from the previous organ and send our state and ETS (as a table)
+handle_cast({recover,Node},{State,NextNode})-> 
 	{recover,Node} ! {State,ets:tab2list(?Name_table)},
   {noreply,{State,NextNode}}.
 
+% Start message from the "head". spwan "Init_cells" amount of white and red cells
 handle_call({start,L}, _From, {State,NextNode}) ->
   PID1 =spawn_link(?MODULE,spawn_N_red_cells,[?Init_cells,L]),
   PID2 =spawn_link(?MODULE,spawn_N_white_cells,[?Init_cells,L]),
 {reply, ok1, {State,NextNode}};
-%% New cell entering Area
+
+%% call for a New cell entering Area. same as the cast just returns a reply to the sender
 handle_call({newCell, CellID, Type, PosX, PosY, SpeedX, SpeedY}, _From, {State,NextNode}) ->
   Reply = case ets:lookup(?Name_table,CellID) of
            %[] -> PID = spawn_link(?MODULE,cell_loop,[CellID, Type, PosX, PosY, SpeedX, SpeedY]), %in the ETS cellID (first arg) is the Key
@@ -108,27 +112,26 @@ handle_call({newCell, CellID, Type, PosX, PosY, SpeedX, SpeedY}, _From, {State,N
           end,
   {reply, Reply, {State,NextNode}};
 
-%% Cell updating position
+%% Cell updating its position
 handle_call({update, CellID, PosX, PosY, SpeedX, SpeedY, Hit}, _From, {{SType, SPosX, SPosY, Counter},NextNode}) ->
   Reply = case ets:lookup(?Name_table,CellID) of
-            [] -> noCell;
+            [] -> noCell; %if it does not exist
             [{CellID, PID, Type, _, _, _, _}] ->
-              ets:insert(?Name_table,{CellID, PID, Type, PosX, PosY, SpeedX, SpeedY}),
+              ets:insert(?Name_table,{CellID, PID, Type, PosX, PosY, SpeedX, SpeedY}), %update the ets with the new arguments
               updated
           end,
-  if
-    (Hit == 1) and (Counter == 1) ->
+  if %here we check if the cell is close enough to the cut/virus.
+    (Hit == 1) and (Counter == 1) -> % enough cells are near the virus -> return everything to normal
       New_state = {normal, 0, 0, 0},
-      [{_,StartTime,TypeP,_,_,_,_}] = ets:lookup(?Name_table,999),	
+      [{_,StartTime,TypeP,_,_,_,_}] = ets:lookup(?Name_table,999), %used for statistics	
       EndTime = erlang:system_time(second),
       io:format("~p ended in ~p seconds ~n",[TypeP,EndTime-StartTime]),
-      ets:delete(?Name_table,999),
-      %TODO: send the new state to the head state
-      gen_server:call({?Head_Module,?Head_Node},{organ_state_change,?Name_table,normal, 0, 0, 0}),
-      send_all(New_state,?Name_table,ets:first(?Name_table));
-    Hit == 1 -> New_counter = Counter -1,
+      ets:delete(?Name_table,999), %delete the virus/cut from the ets
+      gen_server:call({?Head_Module,?Head_Node},{organ_state_change,?Name_table,normal, 0, 0, 0}), %report to the head that the state has changed
+      send_all(New_state,?Name_table,ets:first(?Name_table)); %tell all cells that the statehas changed
+    Hit == 1 -> New_counter = Counter -1, %cell hit the virus/cut 
       New_state = {SType, SPosX, SPosY, New_counter};
-    true -> New_state = {SType, SPosX, SPosY, Counter}
+    true -> New_state = {SType, SPosX, SPosY, Counter} %cell did not hit the virus/cut
   end,
   {reply, Reply, {New_state,NextNode}};
 
@@ -136,23 +139,26 @@ handle_call({update, CellID, PosX, PosY, SpeedX, SpeedY, Hit}, _From, {{SType, S
 handle_call({leaving, CellID}, _From, {State,NextNode}) ->
   [{CellID, PID, Type, PosX, PosY, SpeedX, SpeedY}]= ets:lookup(?Name_table,CellID),
   ets:delete(?Name_table,CellID),
-  gen_server:cast({?Next_module,NextNode},{newCell,CellID, Type, 0, PosY, SpeedX, SpeedY}),
+  gen_server:cast({?Next_module,NextNode},{newCell,CellID, Type, 0, PosY, SpeedX, SpeedY}), %cast to the next organ that a cell with (Args) is entering its area. the x is zero so it will enter from the left 
   {reply, deleted, {State,NextNode}};
 
+%state change from the "head"
 handle_call({state, {Type, PosX, PosY, Counter}}, _From, {State,NextNode}) ->
   New_state = {Type, PosX, PosY, Counter},
   if Type == normal ->
-    ets:delete(?Name_table,999);
-    Type == stress ->
-      ets:delete(?Name_table,999);
-    (Type == cut) or (Type == virus) ->
-    Time = erlang:system_time(second),
-    ets:insert(?Name_table,{999, Time, Type, PosX, PosY, 0, 0})
+    ets:delete(?Name_table,999); %delete the virus/cut
+    Type == stress -> 
+      ets:delete(?Name_table,999);%delete the virus/cut
+    (Type == cut) or (Type == virus) -> 
+    Time = erlang:system_time(second), %used for statistics
+    ets:insert(?Name_table,{999, Time, Type, PosX, PosY, 0, 0}) %add the virus/cut
   end,
-  send_all(New_state,?Name_table,ets:first(?Name_table)),
+  send_all(New_state,?Name_table,ets:first(?Name_table)), %send all cells the new state
   {reply, new_state_received, {New_state,NextNode}};
 
-handle_call({updatenode, New_node}, _From, {State,NextNode}) ->
+%used for when the next node has fallen-> changes the next node to be my node (where the new server will be recovered)
+%when the server is back on its original node we will receive this message again and switch it back.
+handle_call({updatenode, New_node}, _From, {State,NextNode}) -> 
   	if NextNode == ?Next_node ->
 		New_node1 = ?My_node;
 	true -> New_node1 =?Next_node
@@ -163,6 +169,7 @@ end,
 handle_call(stop, _From, {State,NextNode}) ->
   {stop, normal, stopped, {State,NextNode}};
 
+%used to restart the node when it is recovered
 handle_call({restart}, _From, {State,Node}) -> send_all_cells(ets:first(?Name_table)),
 					  gen_server:call({?Name_table,?My_node},{state,State}),
 					{reply, finish, {State,Node}};
@@ -185,7 +192,9 @@ leaving_cell(CellID) -> gen_server:call(?MODULE,{leaving,CellID}).
 update_state(New_state) -> gen_server:call(?MODULE,{state,New_state}). % New_state = {Type, PosX, PosY, Counter}
 update_node(New_node) -> gen_server:call(?MODULE,{updatenode,New_node}).
 get_state() -> gen_server:call(?MODULE,{getstate}).
+printets() -> gen_server:call(?MODULE,{printets}).
 
+%send all the cells the State of the system (if its a virus/cut, it will not send the state and continue)
 send_all(State,?Name_table,Current_key) ->
   case ets:lookup(?Name_table,Current_key) of
     [] -> finished;
@@ -196,10 +205,7 @@ send_all(State,?Name_table,Current_key) ->
   end.
 
 
-%%%=================================================================================================================
-%%%                                   Testing Functions
-%%%=================================================================================================================
-printets() -> gen_server:call(?MODULE,{printets}).
+%spawns cell with a random uniform distribution of place and speed. (L is the base initial unique cell ID given to each cell- in the head process, L is different for each organ) 
 spawn_N_red_cells(0,_)-> ok;
 spawn_N_red_cells(N,L)->
   new_cell(N+L, red, rand:uniform(800)+100, rand:uniform(600)+100, rand:uniform(5), rand:uniform(10)-5),
@@ -215,34 +221,29 @@ spawn_N_white_cells(N,L)->
 
 
 %%%=================================================================================================================
-%%                                  NOT USED - BUT NECESSARY
+%%                                  NECESSARY
 %%%=================================================================================================================
-%% @private
-%% @doc Handling cast messages
 
-%handle_cast(_Request, {State}) ->
- % {noreply,{State}}.
 
 %% @private
-%% @doc Handling all non call/cast messages
 handle_info(_Info, {State,NextNode}) ->
   {noreply, {State,NextNode}}.
 
 %% @private
-%% @doc This function is called by a gen_server when it is about to
-%% terminate. It should be the opposite of Module:init/1 and do any
-%% necessary cleaning up. When it returns, the gen_server terminates
-%% with Reason. The return value is ignored.
+%kills all processes under me
 terminate(_Reason, {State,NextNode}) ->
-  exit(whereis(?Pid_print_speed_def),kill),
-  kill_all_cells(ets:first(?Name_table)),
+  exit(whereis(?Pid_print_speed_def),kill), 
+  kill_all_cells(ets:first(?Name_table)), 
   ok.
 
 %% @private
-%% @doc Convert process state when code is changed
 code_change(_OldVsn, {State,NextNode}, _Extra) ->
   {ok, {State,NextNode}}.
 
+%%%=================================================================================================================
+%%                                  GUI
+%%%=================================================================================================================
+%start a new screen
 run_screen(Xsize,Ysize)->
   Wx = wx:new(),
   Frame = wxFrame:new(Wx, -1, "Hand0", [{size, {Xsize, Ysize}}]),
@@ -259,7 +260,7 @@ run_screen(Xsize,Ysize)->
   wxFrame:show(Frame),
   screen_loop(Panel).
 
-
+%here we wait (?Timer will control the frame rate), then draw all cells and viruses from the ETS
 screen_loop(Panel) ->
   receive
     x -> {State} = {0}
@@ -277,26 +278,26 @@ screen_loop(Panel) ->
   screen_loop(Panel).
 
 
-
+%draws all the cells and viruses
 draw_all(Paint,?Name_table,Current_key,Brush) ->
   case ets:lookup(?Name_table,Current_key) of
     [] -> finished;
-    [{_,_,red,X,Y,_,_}] ->
+    [{_,_,red,X,Y,_,_}] -> %red cell
       wxBrush:setColour(Brush,{255,0,0}),
       wxDC:setBrush(Paint, Brush),
       wxDC:drawCircle(Paint,{X,Y},3),
       draw_all(Paint,?Name_table,ets:next(?Name_table,Current_key),Brush);
-    [{_,_,white,X,Y,_,_}] ->
+    [{_,_,white,X,Y,_,_}] -> %white cell
       wxBrush:setColour(Brush,{255,255,255}),
       wxDC:setBrush(Paint, Brush),
       wxDC:drawCircle(Paint,{X,Y},3),
       draw_all(Paint,?Name_table,ets:next(?Name_table,Current_key),Brush);
-    [{_,_,virus,X,Y,_,_}] ->
+    [{_,_,virus,X,Y,_,_}] -> %virus
       wxBrush:setColour(Brush,{0,255,0}),
       wxDC:setBrush(Paint, Brush),
       wxDC:drawCircle(Paint,{X,Y},10),
       draw_all(Paint,?Name_table,ets:next(?Name_table,Current_key),Brush);
-    [{_,_,cut,X,Y,_,_}] ->
+    [{_,_,cut,X,Y,_,_}] -> %cut
       wxBrush:setColour(Brush,{255,0,255}),
       wxDC:setBrush(Paint, Brush),
       wxDC:drawCircle(Paint,{X,Y},10),
@@ -304,7 +305,9 @@ draw_all(Paint,?Name_table,Current_key,Brush) ->
 
   end.
 
-
+%%%=================================================================================================================
+%%                                  statistics
+%%%=================================================================================================================
 print_avg_speed() ->
    receive x-> void
    after 1000 -> [AvgWhite,AvgRed] = cal_avg_speed(?Name_table,ets:first(?Name_table),[0,0,0,0]),
@@ -312,6 +315,7 @@ print_avg_speed() ->
 		 print_avg_speed()
    end.
 
+%calculates the average speed by going over all cells.
 cal_avg_speed(?Name_table,Current_key,[WhiteSpeed,WhiteCounter,RedSpeed,RedCounter]) -> 
   case ets:lookup(?Name_table,Current_key) of
     [] -> if (WhiteCounter == 0) and (RedCounter == 0) -> [0,0];
@@ -323,14 +327,19 @@ cal_avg_speed(?Name_table,Current_key,[WhiteSpeed,WhiteCounter,RedSpeed,RedCount
     [{_,_,white,_,_,Xspeed,Yspeed}] -> cal_avg_speed(?Name_table,ets:next(?Name_table,Current_key),[WhiteSpeed+(math:sqrt(Xspeed*Xspeed +Yspeed*Yspeed)),WhiteCounter+1,RedSpeed,RedCounter]);
     [_] -> cal_avg_speed(?Name_table,Current_key,[WhiteSpeed,WhiteCounter,RedSpeed,RedCounter])
   end.
+ 
 
+%%%=================================================================================================================
+%%                                  recovery
+%%%=================================================================================================================
+% used when a server is recovered, will send all cells from the temporary server to the recovered server in order to continue with the correct state
 send_all_cells(Current_key) ->
    case ets:lookup(?Name_table,Current_key) of
       [] -> finish;
       [{CellID,_,Type, PosX, PosY, SpeedX, SpeedY}] -> gen_server:cast({?Name_table,?My_node},{newCell,CellID, Type, PosX, PosY, SpeedX, SpeedY}),
       send_all_cells(ets:next(?Name_table,Current_key))
    end.
-
+% used when a server is recovered, kills all cell in the temporery server
 kill_all_cells(Current_key) ->
    case ets:lookup(?Name_table,Current_key) of
       [] -> exit(whereis(?Pid_screen_def), kill);
