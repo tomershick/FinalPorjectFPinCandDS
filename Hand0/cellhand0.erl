@@ -71,7 +71,7 @@ cell_loop(CellID, Type, PosX, PosY, SpeedX, SpeedY,Hit,Sent_hit) ->
     {virus, V_PosX, V_PosY, Counter} ->  %Speed are calculated using (Vx^2 + Vy^2 = 100)
       receive
         x ->void
-      after ?Timer  ->  self() ! {virus, V_PosX, V_PosY, Counter}
+      after ?Timer  ->  self() ! {virus, V_PosX, V_PosY, Counter} %send myself the state so i can react again
       end,
       Dx = NewPosX - V_PosX, %distance from virus
       Dy = NewPosY - V_PosY,
